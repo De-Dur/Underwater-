@@ -1,0 +1,1490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="theme-color" content="#061522" />
+<title>Mobile Underwater Caustics Camera + Video</title>
+
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #000;
+    font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    touch-action: none;
+  }
+
+  #app {
+    position: fixed;
+    inset: 0;
+    background: #000;
+    overflow: hidden;
+  }
+
+  #video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 1;
+    background: transparent;
+    transform: scaleX(-1);
+  }
+
+  #fx {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 2;
+    pointer-events: none;
+  }
+
+  #status {
+    position: fixed;
+    top: 18px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 20;
+    color: rgba(255,255,255,0.92);
+    background: rgba(8, 10, 12, 0.30);
+    border: 1px solid rgba(255,255,255,0.13);
+    border-radius: 999px;
+    padding: 9px 15px;
+    font-size: 12px;
+    line-height: 1.35;
+    letter-spacing: 0.02em;
+    backdrop-filter: blur(18px) saturate(130%);
+    box-shadow: 0 12px 44px rgba(0,0,0,0.20);
+    max-width: min(86vw, 560px);
+    text-align: center;
+  }
+
+  #startBtn {
+    position: fixed;
+    left: 50%;
+    top: 58px;
+    transform: translateX(-50%);
+    z-index: 30;
+    width: auto;
+    height: auto;
+    min-width: 132px;
+    border-radius: 999px;
+    padding: 11px 18px;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    background: rgba(255,255,255,0.12);
+    color: rgba(255,255,255,0.92);
+    border: 1px solid rgba(255,255,255,0.18);
+    backdrop-filter: blur(18px) saturate(140%);
+    box-shadow: 0 14px 44px rgba(0,0,0,0.28);
+  }
+
+  #startBtn::before {
+    content: "";
+    font-size: 0;
+  }
+
+  #startBtn.hidden {
+    display: none;
+  }
+
+  #ui {
+    position: fixed;
+    left: 10px;
+    bottom: max(10px, env(safe-area-inset-bottom));
+    z-index: 20;
+    width: 190px;
+    padding: 10px 10px 9px;
+    border-radius: 18px;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .panel {
+    display: grid;
+    gap: 7px;
+  }
+
+  label {
+    display: block;
+    font-size: 8px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.8);
+    margin-bottom: 2px;
+  }
+
+  label span {
+    display: none;
+  }
+
+  input[type="range"] {
+    width: 100%;
+    appearance: none;
+    -webkit-appearance: none;
+    background: transparent;
+    height: 16px;
+  }
+
+  input[type="range"]::-webkit-slider-runnable-track {
+    height: 1px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.5);
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.92);
+    border: 1px solid rgba(255,255,255,0.75);
+    box-shadow: none;
+    margin-top: -4px;
+  }
+
+  input[type="range"]::-moz-range-track {
+    height: 1px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.5);
+  }
+
+  input[type="range"]::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.92);
+    border: 1px solid rgba(255,255,255,0.75);
+    box-shadow: none;
+  }
+
+  button {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.22);
+    background: rgba(255,255,255,0.04);
+    color: rgba(255,255,255,0.92);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0;
+    cursor: pointer;
+    box-shadow: none;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+
+  button::before {
+    content: "↺";
+    font-size: 15px;
+    line-height: 1;
+    font-weight: 300;
+  }
+
+  button:active {
+    transform: scale(0.96);
+    background: rgba(255,255,255,0.18);
+  }
+
+  .buttonRow {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    margin-top: 2px;
+  }
+
+  #videoBtn::before {
+    content: "▣";
+    font-size: 16px;
+    line-height: 1;
+    font-weight: 300;
+  }
+
+  #videoBtn.loaded::before {
+    content: "▶";
+    font-size: 16px;
+  }
+
+
+  @supports (padding: max(0px)) {
+    #ui {
+      bottom: max(18px, env(safe-area-inset-bottom));
+      left: max(18px, env(safe-area-inset-left));
+    }
+
+    #status {
+      top: max(18px, env(safe-area-inset-top));
+    }
+
+    #startBtn {
+      top: max(58px, calc(env(safe-area-inset-top) + 48px));
+    }
+  }
+
+  @media (max-width: 780px), (pointer: coarse) {
+    body {
+      overscroll-behavior: none;
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+    }
+
+    #status {
+      top: max(10px, env(safe-area-inset-top));
+      max-width: calc(100vw - 24px);
+      font-size: 11px;
+      padding: 8px 12px;
+    }
+
+    #startBtn {
+      top: max(50px, calc(env(safe-area-inset-top) + 42px));
+      min-width: 150px;
+      min-height: 44px;
+      font-size: 11px;
+      padding: 12px 18px;
+    }
+
+    #ui {
+      left: 8px;
+      right: auto;
+      bottom: max(8px, env(safe-area-inset-bottom));
+      width: 165px;
+      max-height: min(44vh, 340px);
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 8px 8px 7px;
+      border-radius: 16px;
+      background: transparent;
+      border: none;
+      box-shadow: none;
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+    }
+
+    .panel {
+      gap: 6px;
+    }
+
+    label {
+      font-size: 8px;
+      letter-spacing: 0.05em;
+    }
+
+    input[type="range"] {
+      height: 16px;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      width: 12px;
+      height: 12px;
+      margin-top: -5px;
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 12px;
+      height: 12px;
+    }
+
+    .buttonRow {
+      gap: 8px;
+      padding-top: 0;
+    }
+
+    button {
+      width: 34px;
+      height: 34px;
+    }
+
+    button::before {
+      font-size: 15px;
+    }
+
+    #videoBtn::before {
+      font-size: 14px;
+    }
+  }
+
+  .hidden {
+    display: none;
+  }
+
+  @media (max-width: 780px) {
+    #ui {
+      left: 10px;
+      bottom: 10px;
+      width: min(250px, calc(100vw - 20px));
+      border-radius: 22px;
+      padding: 13px;
+      gap: 9px;
+    }
+
+    .panel {
+      gap: 10px;
+    }
+
+    label {
+      font-size: 8px;
+      margin-bottom: 6px;
+    }
+
+    button {
+      width: 40px;
+      height: 40px;
+    }
+
+    button::before {
+      font-size: 18px;
+    }
+  }
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/selfie_segmentation.js"></script>
+</head>
+
+<body>
+<div id="app">
+  <video id="video" autoplay playsinline webkit-playsinline muted></video>
+  <canvas id="fx"></canvas>
+
+  <div id="status">
+    Starting camera… Allow camera permission. Use HTTPS / GitHub Pages / localhost.
+  </div>
+
+  <button id="startBtn" type="button">Start camera</button>
+
+  <div id="ui">
+    <div class="panel">
+      <div class="control">
+        <label>Light <span id="strengthText">2.00</span></label>
+        <input id="strength" type="range" min="0" max="8" step="0.01" value="2.00">
+      </div>
+
+      <div class="control">
+        <label>Background <span id="bgText">1.10</span></label>
+        <input id="bg" type="range" min="0" max="4" step="0.01" value="1.10">
+      </div>
+
+      <div class="control">
+        <label>Motion <span id="speedText">1.00</span></label>
+        <input id="speed" type="range" min="0" max="3" step="0.01" value="1.00">
+      </div>
+
+      <div class="control">
+        <label>Scale <span id="sizeText">0.36</span></label>
+        <input id="size" type="range" min="0.18" max="1.20" step="0.01" value="0.36">
+      </div>
+
+      <div class="control">
+        <label>Softness <span id="softnessText">0.82</span></label>
+        <input id="softness" type="range" min="0.4" max="3" step="0.01" value="0.82">
+      </div>
+
+      <div class="control">
+        <label>Warmth <span id="goldText">0.28</span></label>
+        <input id="gold" type="range" min="0" max="3" step="0.01" value="0.28">
+      </div>
+
+      <div class="control">
+        <label>Glow <span id="wetText">1.05</span></label>
+        <input id="wet" type="range" min="0" max="3" step="0.01" value="1.05">
+      </div>
+
+      <div class="buttonRow">
+        <button id="switchBtn" title="Switch camera">Switch camera</button>
+        <button id="videoBtn" title="Load video" type="button">Load video</button>
+        <input id="videoFile" type="file" accept="video/*,.mp4,.mov,.webm" hidden>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+const video = document.getElementById("video");
+const fx = document.getElementById("fx");
+const ctx = fx.getContext("2d");
+const statusEl = document.getElementById("status");
+
+const controls = {
+  strength: document.getElementById("strength"),
+  bg: document.getElementById("bg"),
+  speed: document.getElementById("speed"),
+  size: document.getElementById("size"),
+  softness: document.getElementById("softness"),
+  gold: document.getElementById("gold"),
+  wet: document.getElementById("wet")
+};
+
+for (const key in controls) {
+  const label = document.getElementById(key + "Text");
+  controls[key].addEventListener("input", () => {
+    label.textContent = controls[key].value;
+  });
+}
+
+let stream = null;
+let uploadedVideoURL = null;
+let usingUploadedVideo = false;
+let facingMode = "user";
+let mirror = true;
+
+function updateVideoPresentation() {
+  // Camera stays immersive. Uploaded video should preserve full height, especially vertical clips,
+  // so the side areas are filled only by the turquoise wave background.
+  if (usingUploadedVideo) {
+    video.style.objectFit = "contain";
+    video.style.background = "transparent";
+  } else {
+    video.style.objectFit = "cover";
+    video.style.background = "transparent";
+  }
+}
+
+let faceResults = null;
+let handResults = null;
+
+const maskCanvas = document.createElement("canvas");
+const maskCtx = maskCanvas.getContext("2d");
+
+const maskGlowCanvas = document.createElement("canvas");
+const maskGlowCtx = maskGlowCanvas.getContext("2d");
+
+const causticSmall = document.createElement("canvas");
+const causticSmallCtx = causticSmall.getContext("2d");
+
+const causticBig = document.createElement("canvas");
+const causticBigCtx = causticBig.getContext("2d");
+
+const oceanSmall = document.createElement("canvas");
+const oceanSmallCtx = oceanSmall.getContext("2d");
+
+const oceanBig = document.createElement("canvas");
+const oceanBigCtx = oceanBig.getContext("2d");
+
+const maskedFx = document.createElement("canvas");
+const maskedFxCtx = maskedFx.getContext("2d");
+
+const motionSmall = document.createElement("canvas");
+const motionSmallCtx = motionSmall.getContext("2d", { willReadFrequently: true });
+
+const motionTemp = document.createElement("canvas");
+const motionTempCtx = motionTemp.getContext("2d");
+
+const motionSmoothSmall = document.createElement("canvas");
+const motionSmoothSmallCtx = motionSmoothSmall.getContext("2d", { willReadFrequently: true });
+
+const motionMask = document.createElement("canvas");
+const motionMaskCtx = motionMask.getContext("2d");
+
+const personMask = document.createElement("canvas");
+const personMaskCtx = personMask.getContext("2d");
+
+const boostedMask = document.createElement("canvas");
+const boostedMaskCtx = boostedMask.getContext("2d");
+
+const staticMask = document.createElement("canvas");
+const staticMaskCtx = staticMask.getContext("2d");
+
+let prevMotionFrame = null;
+    motionSmoothSmallCtx.clearRect(0, 0, motionSmoothSmall.width, motionSmoothSmall.height);
+let segResults = null;
+
+function resizeAll() {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const w = Math.floor(window.innerWidth * dpr);
+  const h = Math.floor(window.innerHeight * dpr);
+
+  for (const c of [fx, maskCanvas, maskGlowCanvas, causticBig, oceanBig, maskedFx, motionMask, personMask, boostedMask, staticMask]) {
+    c.width = w;
+    c.height = h;
+    c.style.width = window.innerWidth + "px";
+    c.style.height = window.innerHeight + "px";
+  }
+
+  // Accurate Voronoi texture base.
+  causticSmall.width = Math.max(240, Math.floor(w / 4.8));
+  causticSmall.height = Math.max(140, Math.floor(h / 4.8));
+
+  // Separate broader ocean-surface pattern for non-moving areas.
+  oceanSmall.width = Math.max(220, Math.floor(w / 5.2));
+  oceanSmall.height = Math.max(140, Math.floor(h / 5.2));
+
+  // Motion analysis buffers.
+  motionSmall.width = Math.max(160, Math.floor(w / 8));
+  motionSmall.height = Math.max(90, Math.floor(h / 8));
+  motionTemp.width = motionSmall.width;
+  motionTemp.height = motionSmall.height;
+  motionSmoothSmall.width = motionSmall.width;
+  motionSmoothSmall.height = motionSmall.height;
+}
+window.addEventListener("resize", resizeAll);
+resizeAll();
+
+function setStatus(text) {
+  statusEl.innerHTML = text;
+  statusEl.classList.remove("hidden");
+}
+function hideStatusSoon() {
+  setTimeout(() => statusEl.classList.add("hidden"), 1800);
+}
+
+async function startCamera() {
+  try {
+    usingUploadedVideo = false;
+
+    if (uploadedVideoURL) {
+      URL.revokeObjectURL(uploadedVideoURL);
+      uploadedVideoURL = null;
+    }
+
+    if (stream) {
+      stream.getTracks().forEach(t => t.stop());
+      stream = null;
+    }
+
+    setStatus("Requesting camera permission…");
+
+    const constraintsList = [
+      {
+        video: {
+          facingMode: { ideal: facingMode },
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        },
+        audio: false
+      },
+      {
+        video: {
+          facingMode: facingMode
+        },
+        audio: false
+      },
+      {
+        video: true,
+        audio: false
+      }
+    ];
+
+    let lastError = null;
+
+    for (const constraints of constraintsList) {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+        break;
+      } catch (err) {
+        lastError = err;
+        stream = null;
+      }
+    }
+
+    if (!stream) throw lastError || new Error("Camera unavailable");
+
+    video.srcObject = stream;
+    video.removeAttribute("src");
+    video.loop = false;
+    video.muted = true;
+    video.setAttribute("muted", "");
+    video.playsInline = true;
+    video.setAttribute("playsinline", "");
+    video.setAttribute("webkit-playsinline", "");
+    video.controls = false;
+
+    try {
+      await video.play();
+    } catch (playErr) {
+      console.warn("play needs gesture", playErr);
+      setStatus("Tap Start camera once more if the camera preview does not appear.");
+    }
+
+    mirror = facingMode === "user";
+    video.style.transform = mirror ? "scaleX(-1)" : "scaleX(1)";
+    updateVideoPresentation();
+
+    const btn = document.getElementById("videoBtn");
+    if (btn) btn.classList.remove("loaded");
+
+    const startBtn = document.getElementById("startBtn");
+    if (startBtn) startBtn.classList.add("hidden");
+
+    setStatus("Camera running. Smooth non-looping caustics loaded.");
+    hideStatusSoon();
+  } catch (err) {
+    console.error(err);
+
+    const startBtn = document.getElementById("startBtn");
+    if (startBtn) startBtn.classList.remove("hidden");
+
+    setStatus(
+      "<b>Camera failed.</b><br>" +
+      "Open from HTTPS / GitHub Pages, not directly from Files.<br>" +
+      "On iPhone: Safari → allow camera.<br>" +
+      "On Android: Chrome → allow camera.<br>" +
+      "Or use ▣ to load a video."
+    );
+  }
+}
+
+async function startUploadedVideo(file) {
+  try {
+    if (!file) return;
+
+    usingUploadedVideo = true;
+
+    if (stream) {
+      stream.getTracks().forEach(t => t.stop());
+      stream = null;
+    }
+
+    if (uploadedVideoURL) {
+      URL.revokeObjectURL(uploadedVideoURL);
+      uploadedVideoURL = null;
+    }
+
+    uploadedVideoURL = URL.createObjectURL(file);
+
+    video.srcObject = null;
+    video.src = uploadedVideoURL;
+    video.loop = true;
+    video.muted = true;
+    video.setAttribute("muted", "");
+    video.playsInline = true;
+    video.setAttribute("playsinline", "");
+    video.setAttribute("webkit-playsinline", "");
+    video.controls = false;
+
+    // Uploaded video should not be mirrored by default.
+    mirror = false;
+    video.style.transform = "scaleX(1)";
+    updateVideoPresentation();
+
+    video.onloadedmetadata = () => {
+      updateVideoPresentation();
+    };
+
+    await video.play();
+
+    // Reset motion memory so the first uploaded frames do not flash.
+    prevMotionFrame = null;
+    motionSmoothSmallCtx.clearRect(0, 0, motionSmoothSmall.width, motionSmoothSmall.height);
+
+    const btn = document.getElementById("videoBtn");
+    if (btn) btn.classList.add("loaded");
+
+    const startBtn = document.getElementById("startBtn");
+    if (startBtn) startBtn.classList.add("hidden");
+
+    setStatus("Uploaded video running. Smooth tracking + non-looping caustics loaded.");
+    hideStatusSoon();
+  } catch (err) {
+    console.error(err);
+    setStatus(
+      "<b>Video could not start.</b><br>" +
+      "Try MP4 / WebM / MOV supported by your browser."
+    );
+  }
+}
+
+
+function pToScreen(p, w, h) {
+  return {
+    x: mirror ? (1 - p.x) * w : p.x * w,
+    y: p.y * h
+  };
+}
+
+function buildTrackingMask() {
+  const w = maskCanvas.width;
+  const h = maskCanvas.height;
+
+  maskCtx.clearRect(0, 0, w, h);
+  maskGlowCtx.clearRect(0, 0, w, h);
+
+  maskCtx.fillStyle = "white";
+  maskCtx.strokeStyle = "white";
+  maskCtx.lineCap = "round";
+  maskCtx.lineJoin = "round";
+
+  let hasMask = false;
+
+  if (faceResults && faceResults.multiFaceLandmarks && faceResults.multiFaceLandmarks.length) {
+    hasMask = true;
+    const lm = faceResults.multiFaceLandmarks[0];
+    const oval = [
+      10,338,297,332,284,251,389,356,454,323,361,288,
+      397,365,379,378,400,377,152,148,176,149,150,136,
+      172,58,132,93,234,127,162,21,54,103,67,109
+    ];
+
+    maskCtx.beginPath();
+    oval.forEach((id, i) => {
+      const p = pToScreen(lm[id], w, h);
+      if (i === 0) maskCtx.moveTo(p.x, p.y);
+      else maskCtx.lineTo(p.x, p.y);
+    });
+    maskCtx.closePath();
+    maskCtx.fill();
+  }
+
+  if (handResults && handResults.multiHandLandmarks) {
+    hasMask = true;
+    const connections = [
+      [0,1],[1,2],[2,3],[3,4],
+      [0,5],[5,6],[6,7],[7,8],
+      [0,9],[9,10],[10,11],[11,12],
+      [0,13],[13,14],[14,15],[15,16],
+      [0,17],[17,18],[18,19],[19,20],
+      [5,9],[9,13],[13,17]
+    ];
+
+    for (const hand of handResults.multiHandLandmarks) {
+      maskCtx.lineWidth = Math.max(34, w * 0.032);
+
+      for (const [a, b] of connections) {
+        const pa = pToScreen(hand[a], w, h);
+        const pb = pToScreen(hand[b], w, h);
+        maskCtx.beginPath();
+        maskCtx.moveTo(pa.x, pa.y);
+        maskCtx.lineTo(pb.x, pb.y);
+        maskCtx.stroke();
+      }
+
+      for (const lm of hand) {
+        const p = pToScreen(lm, w, h);
+        maskCtx.beginPath();
+        maskCtx.arc(p.x, p.y, Math.max(18, w * 0.013), 0, Math.PI * 2);
+        maskCtx.fill();
+      }
+    }
+  }
+
+  maskGlowCtx.save();
+  maskGlowCtx.filter = "blur(26px)";
+  maskGlowCtx.drawImage(maskCanvas, 0, 0);
+  maskGlowCtx.restore();
+
+  maskCtx.save();
+  maskCtx.filter = "blur(10px)";
+  maskCtx.drawImage(maskCanvas, 0, 0);
+  maskCtx.restore();
+
+  return hasMask;
+}
+
+// Natural caustic cells: thin bright center + large transparent falloff.
+// This avoids fat graphic curves and creates pool-like refracted light.
+function hash2(ix, iy, seed) {
+  const x = Math.sin(ix * 127.1 + iy * 311.7 + seed * 74.7) * 43758.5453;
+  const y = Math.sin(ix * 269.5 + iy * 183.3 + seed * 41.9) * 24634.6345;
+  return {
+    x: x - Math.floor(x),
+    y: y - Math.floor(y)
+  };
+}
+
+function smoothstep(edge0, edge1, x) {
+  const t = Math.max(0, Math.min(1, (x - edge0) / (edge1 - edge0)));
+  return t * t * (3 - 2 * t);
+}
+
+function updateCaustics(time) {
+  const sw = causticSmall.width;
+  const sh = causticSmall.height;
+  const img = causticSmallCtx.createImageData(sw, sh);
+  const data = img.data;
+
+  const speed = parseFloat(controls.speed.value);
+  const size = parseFloat(controls.size.value);
+  const gold = parseFloat(controls.gold.value);
+
+  // Use several non-matching time phases so animation never feels like it stops/restarts.
+  const t1 = time * 0.000173 * (0.45 + speed * 0.72);
+  const t2 = time * 0.000119 * (0.60 + speed * 0.53);
+  const t3 = time * 0.000071 * (0.80 + speed * 0.31);
+
+  // Smoother, larger line cells.
+  const cellCount = 7.0 / Math.max(0.18, size);
+  const aspect = sw / sh;
+
+  // Continuous global drift. This prevents the Voronoi from looking like a looped tile.
+  const driftGlobalX = Math.sin(t1 * 0.73) * 0.62 + t2 * 0.20;
+  const driftGlobalY = Math.cos(t2 * 0.67) * 0.54 + t3 * 0.16;
+
+  for (let y = 0; y < sh; y++) {
+    const py0 = y / sh;
+    for (let x = 0; x < sw; x++) {
+      const px0 = (x / sw) * aspect;
+
+      // Soft water refraction warp. Mixed periods avoid obvious loops.
+      const rippleA = Math.sin((px0 * 2.1 + py0 * 3.4) * 3.07 + t1 * 5.1) * 0.032;
+      const rippleB = Math.sin((px0 * 4.9 - py0 * 1.5) * 2.31 - t2 * 4.4) * 0.022;
+      const rippleC = Math.cos((px0 * 1.3 + py0 * 6.6) * 1.83 + t3 * 6.9) * 0.016;
+
+      const px = px0 + rippleA + rippleB + driftGlobalX / cellCount;
+      const py = py0 + rippleB * 0.8 + rippleC + driftGlobalY / cellCount;
+
+      const gx = px * cellCount;
+      const gy = py * cellCount;
+      const ix = Math.floor(gx);
+      const iy = Math.floor(gy);
+
+      let d1 = 999.0;
+      let d2 = 999.0;
+
+      for (let oy = -1; oy <= 1; oy++) {
+        for (let ox = -1; ox <= 1; ox++) {
+          const cx = ix + ox;
+          const cy = iy + oy;
+          const h1 = hash2(cx, cy, 1.0);
+          const h2 = hash2(cx, cy, 7.0);
+          const h3 = hash2(cx, cy, 13.0);
+
+          const driftX =
+            Math.sin(t1 * 3.1 + h2.x * 6.283 + cy * 0.19) * 0.085 +
+            Math.sin(t3 * 4.7 + h3.y * 6.283) * 0.035;
+
+          const driftY =
+            Math.cos(t2 * 3.4 + h2.y * 6.283 + cx * 0.21) * 0.085 +
+            Math.cos(t3 * 5.2 + h3.x * 6.283) * 0.035;
+
+          const fx = cx + 0.5 + (h1.x - 0.5) * 0.22 + driftX;
+          const fy = cy + 0.5 + (h1.y - 0.5) * 0.22 + driftY;
+
+          const dx = gx - fx;
+          const dy = gy - fy;
+          const d = Math.sqrt(dx * dx + dy * dy);
+
+          if (d < d1) {
+            d2 = d1;
+            d1 = d;
+          } else if (d < d2) {
+            d2 = d;
+          }
+        }
+      }
+
+      const border = Math.abs(d2 - d1);
+
+      // Soft line core with broad transparent glow.
+      const coreWidth = 0.025;
+      const haloWidth = 0.175;
+
+      let core = Math.exp(-(border * border) / (coreWidth * coreWidth));
+      let halo = Math.exp(-(border * border) / (haloWidth * haloWidth));
+
+      // Slow, uneven brightness along lines, no hard blinking.
+      const shimmer =
+        0.90 +
+        0.055 * Math.sin((px * 5.4 + py * 3.8) + t1 * 4.2) +
+        0.045 * Math.sin((px * 2.6 - py * 5.8) - t2 * 4.7) +
+        0.035 * Math.sin((px * 10.0 + py * 6.5) + t3 * 6.1);
+
+      const nodeSuppress = 0.86 + 0.14 * smoothstep(0.10, 0.46, d1);
+
+      core = Math.pow(core, 1.14) * shimmer * nodeSuppress;
+      halo = Math.pow(halo, 1.62) * 0.34 * shimmer * nodeSuppress;
+
+      let alpha = core * 210 + halo * 126;
+      alpha = Math.max(0, alpha - 7);
+
+      const whiteCore = Math.min(1, core * 1.22);
+      const warm = Math.min(1, gold / 3.0);
+
+      const r = 220 + whiteCore * 22 + warm * 8;
+      const gcol = 238 + whiteCore * 12 + warm * 10;
+      const b = 246 + whiteCore * 9;
+
+      const i = (y * sw + x) * 4;
+      data[i] = Math.min(255, r);
+      data[i + 1] = Math.min(255, gcol);
+      data[i + 2] = Math.min(255, b);
+      data[i + 3] = Math.floor(Math.min(255, alpha));
+    }
+  }
+
+  causticSmallCtx.putImageData(img, 0, 0);
+
+  const w = causticBig.width;
+  const h = causticBig.height;
+  const softness = parseFloat(controls.softness.value);
+
+  causticBigCtx.clearRect(0, 0, w, h);
+  causticBigCtx.imageSmoothingEnabled = true;
+
+  causticBigCtx.save();
+  causticBigCtx.globalCompositeOperation = "screen";
+  causticBigCtx.globalAlpha = 0.86;
+  causticBigCtx.filter = `blur(${0.55 * softness}px)`;
+  causticBigCtx.drawImage(causticSmall, 0, 0, w, h);
+  causticBigCtx.restore();
+
+  causticBigCtx.save();
+  causticBigCtx.globalCompositeOperation = "screen";
+  causticBigCtx.globalAlpha = 0.24;
+  causticBigCtx.filter = `blur(${1.6 * softness}px)`;
+  causticBigCtx.drawImage(causticSmall, -2, 0, w + 4, h);
+  causticBigCtx.drawImage(causticSmall, 2, 0, w + 4, h);
+  causticBigCtx.restore();
+
+  causticBigCtx.save();
+  causticBigCtx.globalCompositeOperation = "screen";
+  causticBigCtx.globalAlpha = 0.36;
+  causticBigCtx.filter = `blur(${4.6 * softness}px)`;
+  causticBigCtx.drawImage(causticSmall, 0, 0, w, h);
+  causticBigCtx.restore();
+
+  causticBigCtx.save();
+  causticBigCtx.globalCompositeOperation = "screen";
+  causticBigCtx.globalAlpha = 0.11;
+  causticBigCtx.filter = `blur(${11.5 * softness}px)`;
+  causticBigCtx.drawImage(causticSmall, 0, 0, w, h);
+  causticBigCtx.restore();
+}
+
+function updateOceanWaves(time) {
+  const sw = oceanSmall.width;
+  const sh = oceanSmall.height;
+  const speed = parseFloat(controls.speed.value);
+  const softness = parseFloat(controls.softness.value);
+
+  const t1 = time * 0.00019 * (0.55 + speed * 0.90);
+  const t2 = time * 0.00013 * (0.70 + speed * 0.63);
+  const t3 = time * 0.000083 * (0.85 + speed * 0.42);
+
+  oceanSmallCtx.clearRect(0, 0, sw, sh);
+  oceanSmallCtx.lineCap = "round";
+  oceanSmallCtx.lineJoin = "round";
+
+  for (let layer = 0; layer < 5; layer++) {
+    const lineCount = 12 + layer * 3;
+    for (let i = 0; i < lineCount; i++) {
+      const yn = (i + 0.5) / lineCount;
+      const baseY = yn * sh;
+      const amp1 = sh * (0.018 + layer * 0.0035);
+      const amp2 = sh * (0.010 + layer * 0.0022);
+      const amp3 = sh * (0.004 + layer * 0.0010);
+      const phase = i * 0.46 + layer * 1.12;
+
+      const drift1 = t1 * (5.6 + layer * 0.9);
+      const drift2 = t2 * (7.3 + layer * 0.6);
+      const drift3 = t3 * (9.1 + layer * 0.4);
+
+      const lateral = Math.sin(t2 * 3.7 + i * 0.34 + layer) * sw * 0.012 + t3 * sw * 0.015;
+
+      oceanSmallCtx.beginPath();
+      for (let x = -sw * 0.12; x <= sw * 1.12; x += 4) {
+        const nx = x / sw;
+        const y = baseY
+          + Math.sin(nx * (5.0 + layer * 0.95) + drift1 + phase) * amp1
+          + Math.sin(nx * (12.0 + layer * 1.6) - drift2 + phase * 1.45) * amp2
+          + Math.cos(nx * (2.7 + layer * 0.45) + drift3 + phase * 0.8) * amp3
+          + Math.sin(nx * 1.4 + drift1 * 0.45 + phase * 0.3) * sh * 0.008;
+        const xx = x + lateral;
+        if (x === -sw * 0.12) oceanSmallCtx.moveTo(xx, y);
+        else oceanSmallCtx.lineTo(xx, y);
+      }
+
+      const alpha = 0.11 - layer * 0.010 + (i % 4) * 0.007;
+      oceanSmallCtx.strokeStyle = `rgba(${180 - layer*6}, ${235 - layer*3}, 255, ${alpha})`;
+      oceanSmallCtx.lineWidth = 1.6 + layer * 0.55;
+      oceanSmallCtx.stroke();
+    }
+  }
+
+  oceanSmallCtx.save();
+  oceanSmallCtx.globalAlpha = 0.18;
+  oceanSmallCtx.strokeStyle = "rgba(190,242,255,0.11)";
+  oceanSmallCtx.lineWidth = 2.8;
+  for (let i = 0; i < 8; i++) {
+    const y0 = (i / 8) * sh + Math.sin(t1 * 4.1 + i) * sh * 0.05;
+    oceanSmallCtx.beginPath();
+    for (let x = -sw * 0.1; x <= sw * 1.1; x += 5) {
+      const nx = x / sw;
+      const y = y0 + nx * sh * 0.08 + Math.sin(nx * 7.0 + t2 * 6.2 + i * 0.9) * sh * 0.018;
+      if (x === -sw * 0.1) oceanSmallCtx.moveTo(x, y);
+      else oceanSmallCtx.lineTo(x, y);
+    }
+    oceanSmallCtx.stroke();
+  }
+  oceanSmallCtx.restore();
+
+  const w = oceanBig.width;
+  const h = oceanBig.height;
+  oceanBigCtx.clearRect(0, 0, w, h);
+  oceanBigCtx.imageSmoothingEnabled = true;
+
+  oceanBigCtx.save();
+  oceanBigCtx.globalCompositeOperation = "screen";
+  oceanBigCtx.globalAlpha = 0.64;
+  oceanBigCtx.filter = `blur(${4.5 * softness}px)`;
+  oceanBigCtx.drawImage(oceanSmall, 0, 0, w, h);
+  oceanBigCtx.restore();
+
+  oceanBigCtx.save();
+  oceanBigCtx.globalCompositeOperation = "screen";
+  oceanBigCtx.globalAlpha = 0.44;
+  oceanBigCtx.filter = `blur(${11.0 * softness}px)`;
+  oceanBigCtx.drawImage(oceanSmall, 0, 0, w, h);
+  oceanBigCtx.restore();
+
+  oceanBigCtx.save();
+  oceanBigCtx.globalCompositeOperation = "screen";
+  oceanBigCtx.globalAlpha = 0.20;
+  oceanBigCtx.filter = `blur(${22.0 * softness}px)`;
+  oceanBigCtx.drawImage(oceanSmall, 0, 0, w, h);
+  oceanBigCtx.restore();
+}
+
+function updatePersonMask() {
+  const w = personMask.width;
+  const h = personMask.height;
+  personMaskCtx.clearRect(0, 0, w, h);
+
+  if (!segResults || !segResults.segmentationMask) return false;
+
+  personMaskCtx.save();
+
+  // Mirror segmentation so it matches mirrored front camera.
+  if (mirror) {
+    personMaskCtx.translate(w, 0);
+    personMaskCtx.scale(-1, 1);
+  }
+
+  // Base silhouette.
+  personMaskCtx.drawImage(segResults.segmentationMask, 0, 0, w, h);
+  personMaskCtx.restore();
+
+  // Use alpha only and soften slightly, but keep silhouette size close to the person.
+  personMaskCtx.save();
+  personMaskCtx.globalCompositeOperation = "source-in";
+  personMaskCtx.fillStyle = "white";
+  personMaskCtx.fillRect(0, 0, w, h);
+  personMaskCtx.restore();
+
+  const tmp = document.createElement("canvas");
+  tmp.width = w;
+  tmp.height = h;
+  const tctx = tmp.getContext("2d");
+  tctx.drawImage(personMask, 0, 0);
+
+  personMaskCtx.clearRect(0, 0, w, h);
+  personMaskCtx.save();
+  personMaskCtx.filter = "blur(6px)";
+  personMaskCtx.drawImage(tmp, 0, 0);
+  personMaskCtx.restore();
+
+  return true;
+}
+
+function updateMotionMask() {
+  const sw = motionSmall.width;
+  const sh = motionSmall.height;
+  const w = motionMask.width;
+  const h = motionMask.height;
+
+  motionMaskCtx.clearRect(0, 0, w, h);
+
+  if (video.readyState < 2) return false;
+
+  motionSmallCtx.save();
+  motionSmallCtx.clearRect(0, 0, sw, sh);
+  if (mirror) {
+    motionSmallCtx.translate(sw, 0);
+    motionSmallCtx.scale(-1, 1);
+  }
+  motionSmallCtx.drawImage(video, 0, 0, sw, sh);
+  motionSmallCtx.restore();
+
+  const frame = motionSmallCtx.getImageData(0, 0, sw, sh);
+  const data = frame.data;
+
+  if (!prevMotionFrame) {
+    prevMotionFrame = new Uint8ClampedArray(data);
+    motionSmoothSmallCtx.clearRect(0, 0, sw, sh);
+    return false;
+  }
+
+  const motionImg = motionTempCtx.createImageData(sw, sh);
+  const mdata = motionImg.data;
+
+  for (let i = 0; i < data.length; i += 4) {
+    const yNow = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+    const yPrev = prevMotionFrame[i] * 0.299 + prevMotionFrame[i + 1] * 0.587 + prevMotionFrame[i + 2] * 0.114;
+    const diff = Math.abs(yNow - yPrev);
+
+    // Lower threshold, less jumpy; temporal smoothing will remove flicker.
+    let a = Math.max(0, (diff - 5.5) * 8.0);
+    if (a > 255) a = 255;
+
+    mdata[i] = 255;
+    mdata[i + 1] = 255;
+    mdata[i + 2] = 255;
+    mdata[i + 3] = a;
+  }
+
+  prevMotionFrame = new Uint8ClampedArray(data);
+
+  motionTempCtx.clearRect(0, 0, sw, sh);
+  motionTempCtx.putImageData(motionImg, 0, 0);
+
+  // Temporal accumulation: new motion appears fast, old motion fades slowly.
+  // This makes tracking feel smooth instead of flashing / jittering.
+  motionSmoothSmallCtx.save();
+  motionSmoothSmallCtx.globalCompositeOperation = "destination-out";
+  motionSmoothSmallCtx.fillStyle = "rgba(0,0,0,0.16)";
+  motionSmoothSmallCtx.fillRect(0, 0, sw, sh);
+  motionSmoothSmallCtx.restore();
+
+  motionSmoothSmallCtx.save();
+  motionSmoothSmallCtx.globalCompositeOperation = "lighter";
+  motionSmoothSmallCtx.globalAlpha = 0.76;
+  motionSmoothSmallCtx.drawImage(motionTemp, 0, 0);
+  motionSmoothSmallCtx.restore();
+
+  motionMaskCtx.save();
+  motionMaskCtx.imageSmoothingEnabled = true;
+  motionMaskCtx.globalCompositeOperation = "source-over";
+
+  motionMaskCtx.globalAlpha = 1.0;
+  motionMaskCtx.filter = "blur(2.5px)";
+  motionMaskCtx.drawImage(motionSmoothSmall, 0, 0, w, h);
+
+  motionMaskCtx.globalAlpha = 0.72;
+  motionMaskCtx.filter = "blur(8px)";
+  motionMaskCtx.drawImage(motionSmoothSmall, 0, 0, w, h);
+
+  motionMaskCtx.globalAlpha = 0.34;
+  motionMaskCtx.filter = "blur(15px)";
+  motionMaskCtx.drawImage(motionSmoothSmall, 0, 0, w, h);
+
+  motionMaskCtx.restore();
+
+  return true;
+}
+
+function render(time) {
+  const w = fx.width;
+  const h = fx.height;
+  const strength = parseFloat(controls.strength.value);
+  const bg = parseFloat(controls.bg.value);
+  const gold = parseFloat(controls.gold.value);
+  const wet = parseFloat(controls.wet.value);
+
+  ctx.clearRect(0, 0, w, h);
+
+  updateCaustics(time);
+  updateOceanWaves(time);
+  const hasMask = buildTrackingMask();
+  const hasPerson = updatePersonMask();
+  const hasMotion = updateMotionMask();
+
+  // Darker underwater base grade.
+  ctx.globalCompositeOperation = "source-over";
+  ctx.fillStyle = "rgba(5, 16, 32, 0.21)";
+  ctx.fillRect(0, 0, w, h);
+
+  // Oceanic blue/turquoise wash for the whole scene.
+  const coolWash = ctx.createRadialGradient(w * 0.54, h * 0.20, h * 0.02, w * 0.54, h * 0.34, h * 1.06);
+  coolWash.addColorStop(0, `rgba(95, 225, 255, ${0.07 + 0.020 * bg})`);
+  coolWash.addColorStop(0.26, `rgba(40, 180, 225, ${0.08 + 0.022 * bg})`);
+  coolWash.addColorStop(0.60, `rgba(22, 110, 168, ${0.08 + 0.018 * bg})`);
+  coolWash.addColorStop(1, `rgba(7, 25, 58, ${0.11 + 0.015 * bg})`);
+  ctx.fillStyle = coolWash;
+  ctx.fillRect(0, 0, w, h);
+
+  // Small warm sunlight component.
+  const warmWash = ctx.createRadialGradient(w * 0.50, h * 0.08, 0, w * 0.50, h * 0.14, h * 0.88);
+  warmWash.addColorStop(0, `rgba(255, 210, 120, ${0.018 * gold})`);
+  warmWash.addColorStop(0.30, `rgba(255, 158, 70, ${0.010 * gold})`);
+  warmWash.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = warmWash;
+  ctx.fillRect(0, 0, w, h);
+
+  // Full-screen ocean-surface background wave pattern.
+  ctx.globalCompositeOperation = 'screen';
+  ctx.globalAlpha = Math.min(1, 0.060 + 0.065 * bg);
+  ctx.drawImage(oceanBig, 0, 0);
+
+  // Build masks.
+  staticMaskCtx.clearRect(0, 0, w, h);
+  staticMaskCtx.fillStyle = 'white';
+  staticMaskCtx.fillRect(0, 0, w, h);
+
+  boostedMaskCtx.clearRect(0, 0, w, h);
+  if (hasPerson && hasMotion) {
+    boostedMaskCtx.save();
+    boostedMaskCtx.drawImage(personMask, 0, 0);
+    boostedMaskCtx.globalCompositeOperation = 'destination-in';
+    boostedMaskCtx.drawImage(motionMask, 0, 0);
+    boostedMaskCtx.restore();
+
+    staticMaskCtx.globalCompositeOperation = 'destination-out';
+    staticMaskCtx.drawImage(boostedMask, 0, 0);
+    staticMaskCtx.globalCompositeOperation = 'source-over';
+  }
+
+  // NON-MOVING SURFACES: less transparent, more ocean-like, broader blurred waves.
+  maskedFxCtx.clearRect(0, 0, w, h);
+  maskedFxCtx.save();
+  maskedFxCtx.drawImage(staticMask, 0, 0);
+  maskedFxCtx.globalCompositeOperation = 'source-in';
+  maskedFxCtx.drawImage(oceanBig, 0, 0);
+  maskedFxCtx.restore();
+
+  ctx.globalCompositeOperation = 'screen';
+  ctx.globalAlpha = Math.min(1, 0.10 + 0.10 * bg);
+  ctx.drawImage(maskedFx, 0, 0);
+  ctx.globalCompositeOperation = 'soft-light';
+  ctx.globalAlpha = Math.min(1, 0.10 + 0.07 * bg);
+  ctx.drawImage(maskedFx, 0, 0);
+
+  // Extra turquoise veil on static regions.
+  maskedFxCtx.clearRect(0, 0, w, h);
+  maskedFxCtx.save();
+  maskedFxCtx.drawImage(staticMask, 0, 0);
+  maskedFxCtx.globalCompositeOperation = 'source-in';
+  const staticGrad = maskedFxCtx.createRadialGradient(w * 0.55, h * 0.22, h * 0.06, w * 0.55, h * 0.34, h * 1.06);
+  staticGrad.addColorStop(0, `rgba(105, 240, 255, ${0.10 + 0.05 * bg})`);
+  staticGrad.addColorStop(0.35, `rgba(35, 175, 225, ${0.12 + 0.06 * bg})`);
+  staticGrad.addColorStop(0.75, `rgba(14, 92, 155, ${0.10 + 0.05 * bg})`);
+  staticGrad.addColorStop(1, `rgba(6, 30, 74, ${0.09 + 0.03 * bg})`);
+  maskedFxCtx.fillStyle = staticGrad;
+  maskedFxCtx.fillRect(0, 0, w, h);
+  maskedFxCtx.restore();
+
+  ctx.globalCompositeOperation = 'screen';
+  ctx.globalAlpha = 0.10 + 0.07 * bg;
+  ctx.drawImage(maskedFx, 0, 0);
+  ctx.globalCompositeOperation = 'multiply';
+  ctx.globalAlpha = 0.06 + 0.03 * bg;
+  ctx.drawImage(maskedFx, 0, 0);
+
+  // MOVING PERSON SURFACES: more transparent, with a semi-dark color filter.
+  if (hasPerson) {
+    maskedFxCtx.clearRect(0, 0, w, h);
+    maskedFxCtx.save();
+    maskedFxCtx.drawImage(personMask, 0, 0);
+    maskedFxCtx.globalCompositeOperation = 'source-in';
+    maskedFxCtx.fillStyle = 'rgba(8, 28, 54, 0.62)';
+    maskedFxCtx.fillRect(0, 0, w, h);
+    maskedFxCtx.restore();
+
+    ctx.globalCompositeOperation = 'multiply';
+    ctx.globalAlpha = 0.18;
+    ctx.drawImage(maskedFx, 0, 0);
+  }
+
+  // Moderate body-wide wave attachment, subtle so body remains visible.
+  if (hasPerson) {
+    maskedFxCtx.clearRect(0, 0, w, h);
+    maskedFxCtx.save();
+    maskedFxCtx.drawImage(personMask, 0, 0);
+    maskedFxCtx.globalCompositeOperation = 'source-in';
+    ctx.globalAlpha = 1;
+    maskedFxCtx.drawImage(causticBig, 0, 0);
+    maskedFxCtx.restore();
+
+    ctx.globalCompositeOperation = 'screen';
+    ctx.globalAlpha = Math.min(1, 0.030 + 0.020 * bg);
+    ctx.drawImage(maskedFx, 0, 0);
+  }
+
+  // MOVING SURFACES: stronger line caustics with semi-transparent body visibility.
+  if (hasPerson && hasMotion) {
+    maskedFxCtx.clearRect(0, 0, w, h);
+    maskedFxCtx.save();
+    maskedFxCtx.drawImage(boostedMask, 0, 0);
+    maskedFxCtx.globalCompositeOperation = 'source-in';
+    maskedFxCtx.drawImage(causticBig, 0, 0);
+    maskedFxCtx.restore();
+
+    ctx.globalCompositeOperation = 'screen';
+    ctx.globalAlpha = Math.min(1, 0.12 * strength);
+    ctx.drawImage(maskedFx, 0, 0);
+
+    ctx.globalCompositeOperation = 'soft-light';
+    ctx.globalAlpha = Math.min(1, 0.050 * strength);
+    ctx.drawImage(maskedFx, 0, 0);
+
+    // Soft bloom from line centers outwards.
+    ctx.save();
+    ctx.filter = `blur(${5.5 * wet}px)`;
+    ctx.globalCompositeOperation = 'screen';
+    ctx.globalAlpha = Math.min(1, 0.016 * wet * strength);
+    ctx.drawImage(maskedFx, 0, 0);
+    ctx.restore();
+
+    ctx.save();
+    ctx.filter = `blur(${12.0 * wet}px)`;
+    ctx.globalCompositeOperation = 'screen';
+    ctx.globalAlpha = Math.min(1, 0.007 * wet * strength);
+    ctx.drawImage(maskedFx, 0, 0);
+    ctx.restore();
+  }
+
+  // Face and hands slight stability support.
+  if (hasMask) {
+    maskedFxCtx.clearRect(0, 0, w, h);
+    maskedFxCtx.save();
+    maskedFxCtx.drawImage(maskGlowCanvas, 0, 0);
+    maskedFxCtx.globalCompositeOperation = 'source-in';
+    maskedFxCtx.drawImage(causticBig, 0, 0);
+    maskedFxCtx.restore();
+
+    ctx.globalCompositeOperation = 'screen';
+    ctx.globalAlpha = Math.min(1, 0.024 + 0.015 * bg);
+    ctx.drawImage(maskedFx, 0, 0);
+  }
+
+  // Blue-white wet glints.
+  ctx.globalCompositeOperation = 'screen';
+  ctx.globalAlpha = 0.035 * wet;
+  for (let i = 0; i < 8; i++) {
+    const x = (i / 8) * w + Math.sin(time * 0.001 + i * 0.7) * 32;
+    const y = (0.20 + i / 15) * h + Math.cos(time * 0.0013 + i) * 18;
+    const grad = ctx.createRadialGradient(x, y, 0, x, y, 72);
+    grad.addColorStop(0, 'rgba(225,250,255,0.18)');
+    grad.addColorStop(0.25, 'rgba(70,215,255,0.08)');
+    grad.addColorStop(1, 'rgba(0,190,255,0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(x, y, 72, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Deeper blue underwater vignette.
+  ctx.globalCompositeOperation = 'multiply';
+  ctx.globalAlpha = 0.25;
+  const vign = ctx.createRadialGradient(w * 0.5, h * 0.42, h * 0.08, w * 0.5, h * 0.45, h * 0.82);
+  vign.addColorStop(0, 'rgba(255,255,255,1)');
+  vign.addColorStop(0.70, 'rgba(40,78,120,0.44)');
+  vign.addColorStop(1, 'rgba(8,22,48,0.88)');
+  ctx.fillStyle = vign;
+  ctx.fillRect(0, 0, w, h);
+
+  ctx.globalAlpha = 1;
+  requestAnimationFrame(render);
+}
+
+const faceMesh = new FaceMesh({
+  locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
+});
+faceMesh.setOptions({
+  maxNumFaces: 1,
+  refineLandmarks: true,
+  minDetectionConfidence: 0.5,
+  minTrackingConfidence: 0.5
+});
+faceMesh.onResults(results => faceResults = results);
+
+const hands = new Hands({
+  locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+});
+hands.setOptions({
+  maxNumHands: 2,
+  modelComplexity: 1,
+  minDetectionConfidence: 0.5,
+  minTrackingConfidence: 0.5
+});
+hands.onResults(results => handResults = results);
+
+const selfieSegmentation = new SelfieSegmentation({
+  locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/${file}`
+});
+selfieSegmentation.setOptions({
+  modelSelection: 1
+});
+selfieSegmentation.onResults(results => segResults = results);
+
+async function trackingLoop() {
+  if (video.readyState >= 2) {
+    try {
+      await faceMesh.send({ image: video });
+      await hands.send({ image: video });
+      await selfieSegmentation.send({ image: video });
+    } catch (e) {
+      console.warn(e);
+    }
+  }
+  setTimeout(trackingLoop, 55);
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  const startBtn = document.getElementById("startBtn");
+  const switchBtn = document.getElementById("switchBtn");
+  const videoBtn = document.getElementById("videoBtn");
+  const videoFile = document.getElementById("videoFile");
+
+  if (startBtn) {
+    startBtn.addEventListener("click", async () => {
+      await startCamera();
+    });
+  }
+
+  if (switchBtn) {
+    switchBtn.addEventListener("click", async () => {
+      facingMode = facingMode === "user" ? "environment" : "user";
+      await startCamera();
+    });
+  }
+
+  if (videoBtn && videoFile) {
+    videoBtn.addEventListener("click", () => {
+      videoFile.click();
+    });
+
+    videoFile.addEventListener("change", async (event) => {
+      const file = event.target.files && event.target.files[0];
+      await startUploadedVideo(file);
+    });
+  }
+
+  trackingLoop();
+  requestAnimationFrame(render);
+
+  document.addEventListener("visibilitychange", async () => {
+    if (!document.hidden && video.paused && (stream || usingUploadedVideo)) {
+      try { await video.play(); } catch (e) { console.warn(e); }
+    }
+  });
+
+  window.addEventListener("orientationchange", () => {
+    setTimeout(() => {
+      resizeAll();
+      updateVideoPresentation();
+    }, 350);
+  });
+
+  video.addEventListener("click", async () => {
+    if (video.paused) {
+      try { await video.play(); } catch (e) { console.warn(e); }
+    }
+  });
+
+  // Try automatic start, but the visible Start camera button remains if browser blocks it.
+  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    startCamera();
+  } else {
+    setStatus("Camera is not supported in this browser. Use Safari on iPhone or Chrome on Android, or load a video.");
+  }
+});
+</script>
+</body>
+</html>
