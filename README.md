@@ -4,7 +4,7 @@ Interactive browser-based visual effect app that transforms a live camera feed o
 
 ## Open the app
 
-👉 **[Open Underwater Caustics Camera + Video](https://De-Dur.github.io/Underwater/)**
+👉 **[Open Underwater Caustics Camera + Video](https://De-Dur.github.io/Underwater-/)**
 
 ## What this project does
 
